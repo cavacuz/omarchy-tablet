@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "id": "cavacuz.tablet",
+  "name": "Tablet Companion",
+  "version": "0.2.0",
+  "kinds": ["service"],
+  "entryPoints": {
+    "service": "Service.qml"
+  }
+}

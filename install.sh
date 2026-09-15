@@ -1,0 +1,347 @@
+#!/bin/bash
+# install.sh — tablet-kbd share package installer (omarchy-tablet plugin).
+# Coexistence, not conquest: never installs/removes other OSK software,
+# only adds missing marker lines (backed up, idempotent), pins `custom`
+# as the default backend, and ends verify-green-or-loud-fail.
+#
+# Plugin modes:
+#   --no-sudo   skip system package installation (report missing deps
+#               instead) — used when the omarchy-shell deploys on load.
+#   --quiet     minimise output; never pops the usage-guide window
+#               (automatically implied by --no-sudo).
+set -u
+
+NO_SUDO=0
+QUIET=0
+for _arg in "$@"; do
+  case "$_arg" in
+    --no-sudo) NO_SUDO=1; QUIET=1 ;;
+    --quiet) QUIET=1 ;;
+  esac
+done
+
+REPO="$(cd "$(dirname "$0")" && pwd)"
+HYPR="$HOME/.config/hypr"
+HOOKDIR="$HOME/.config/omarchy/hooks/post-update.d"
+UNITDIR="$HOME/.config/systemd/user"
+STATE="$HOME/.local/state/omarchy/toggles/hypr"
+FAIL=0
+
+say()  { echo "-- $1"; }
+ok()   { echo "OK: $1"; }
+skip() { echo "SKIP: $1"; }
+
+bak() {
+  local f
+  local b
+  f="$1"
+  b="$1.bak.$(date +%s)"
+  cp "$f" "$b" && echo "backup: $b"
+}
+
+# Copy repo→live unless live is NEWER (unmirrored live edits exist).
+# Identical content skips silently (no .bak churn on reinstall).
+sync_file() {
+  local src="$1" dst="$2" mode="${3:-}"
+  if [[ -f "$dst" ]]; then
+    if cmp -s "$src" "$dst"; then skip "$(basename "$dst") identical"; return 0; fi
+    if [[ "$dst" -nt "$src" ]]; then
+      echo "FATAL: live $(basename "$dst") is newer than repo copy — mirror live→repo first, then re-run"
+      exit 1
+    fi
+    bak "$dst" >/dev/null
+  fi
+  cp "$src" "$dst" || { echo "FATAL: cannot copy $src"; exit 1; }
+  [[ -n "$mode" ]] && chmod "$mode" "$dst"
+  ok "$(basename "$dst") installed"
+}
+
+# --- 1. Dependencies (Arch-native: pacman, yay for AUR) ---
+say "dependencies"
+OFFICIAL=(wtype python-gobject gtk4 gtk4-layer-shell)
+MISSING=()
+for p in "${OFFICIAL[@]}"; do
+  pacman -Q "$p" >/dev/null 2>&1 && ok "$p present" || MISSING+=("$p")
+done
+MISSING_AUR=()
+if pacman -Q lisgd >/dev/null 2>&1; then
+  ok "lisgd present"
+else
+  MISSING_AUR=(lisgd)
+fi
+if (( NO_SUDO )); then
+  if (( ${#MISSING[@]} > 0 )); then
+    echo "WARN: missing official packages (install manually): ${MISSING[*]}"
+    FAIL=1
+  fi
+  if (( ${#MISSING_AUR[@]} > 0 )); then
+    echo "WARN: missing AUR packages (install manually): ${MISSING_AUR[*]}"
+    FAIL=1
+  fi
+else
+  if (( ${#MISSING[@]} > 0 )); then
+    say "installing missing official packages: ${MISSING[*]}"
+    sudo pacman -S --needed "${MISSING[@]}" || { echo "FATAL: pacman install failed"; exit 1; }
+  fi
+  if (( ${#MISSING_AUR[@]} > 0 )); then
+    say "installing missing AUR packages: ${MISSING_AUR[*]}"
+    yay -S --needed "${MISSING_AUR[@]}" || { echo "FATAL: yay install failed"; exit 1; }
+  fi
+fi
+
+# --- 2. Files (ours outright; backup anything in the way) ---
+say "files"
+mkdir -p "$HYPR/scripts" "$HYPR/kbd-layouts" "$HOOKDIR" "$UNITDIR" "$STATE"
+for s in tablet-mode.sh tablet-modwait.py tablet-auto-exit.py touch-gestures.sh \
+         auto-rotate.sh touch-cursor.py touch-toggle.sh osk-toggle.sh \
+         custom-kbd.py custom-kbd-toggle.sh squeekboard-toggle.sh wvkbd-toggle.sh \
+         tablet-verify.sh tablet-verify-interactive.sh tablet-devices.sh \
+         page-switch.sh tablet-kbd-uninstall.sh; do
+  src=""
+  [[ -f "$REPO/tablet/$s" ]] && src="$REPO/tablet/$s"
+  [[ -f "$REPO/kbd/$s" ]] && src="$REPO/kbd/$s"
+  [[ -z "$src" ]] && { echo "FATAL: $s not in repo"; exit 1; }
+  sync_file "$src" "$HYPR/scripts/$s" "+x"
+done
+[[ -f "$REPO/kbd/layouts/en.json" ]] || { echo "FATAL: en.json not in repo"; exit 1; }
+sync_file "$REPO/kbd/layouts/en.json" "$HYPR/kbd-layouts/en.json"
+sync_file "$REPO/tablet/tablet.lua" "$HYPR/tablet.lua"
+for u in auto-rotate.service lisgd-gestures.service touch-cursor.service; do
+  sync_file "$REPO/tablet/units/$u" "$UNITDIR/$u"
+done
+systemctl --user daemon-reload
+for u in auto-rotate.service lisgd-gestures.service touch-cursor.service; do
+  systemctl --user enable --now "$u" && ok "enabled $u" || { echo "FATAL: cannot enable $u"; exit 1; }
+done
+cp "$REPO/hooks/tablet-verify.hook" "$HOOKDIR/tablet-verify.hook" \
+  && chmod +x "$HOOKDIR/tablet-verify.hook" && ok "post-update hook (report-only)"
+
+# --- 2.5 Device detection (generic; user overrides win) ---
+say "device detection"
+# Source the repo module (same logic the scripts use at runtime).
+source "$REPO/tablet/tablet-devices.sh"
+if [[ -n $TABLET_FINGER ]]; then
+  ok "touch: $TABLET_FINGER"
+else
+  echo "WARN: no touch device detected — scripts will idle until one is pinned"
+  echo "      in ~/.config/hypr/tablet-devices.conf (see README)"
+fi
+[[ -n $TABLET_OUTPUT ]] && ok "output: $TABLET_OUTPUT" || echo "WARN: no internal display detected"
+[[ -n $TABLET_KBD ]] && ok "keyboard: $TABLET_KBD"
+[[ -n $TABLET_PAD ]] && ok "touchpad: $TABLET_PAD" || ok "touchpad: none (pad-less convertible OK)"
+
+# Generated Lua for tablet.lua (regenerated every install to stay current).
+cat > "$HYPR/tablet-devices.lua" <<EOF
+-- GENERATED by tablet-kbd install.sh — device names for tablet.lua.
+-- Detection is generic; pin overrides in tablet-devices.conf instead of
+-- editing this file (it gets overwritten on reinstall).
+return { finger = "$TABLET_FINGER", output = "$TABLET_OUTPUT" }
+EOF
+luac -p "$HYPR/tablet-devices.lua" 2>/dev/null && ok "tablet-devices.lua generated" \
+  || { echo "FATAL: generated lua failed syntax check"; exit 1; }
+
+# User override template — created once, never overwritten.
+if [[ ! -f "$HYPR/tablet-devices.conf" ]]; then
+  cat > "$HYPR/tablet-devices.conf" <<EOF
+# tablet-kbd device overrides (sourced after auto-detection; wins).
+# Uncomment and pin names if auto-detection guesses wrong on your hardware.
+# Find names with: hyprctl devices   /   grep -i finger /proc/bus/input/devices
+# TABLET_FINGER="wacom-hid-5272-finger"
+# TABLET_OUTPUT="eDP-1"
+# TABLET_KBD="at-translated-set-2-keyboard"
+# TABLET_PAD=""
+EOF
+  ok "tablet-devices.conf template created (overrides win)"
+else
+  skip "tablet-devices.conf already present (user overrides kept)"
+fi
+
+# --- 3. Owned-file wiring (additive-only, idempotent) ---
+say "owned wiring"
+if grep -qE '^[[:space:]]*require\("hypr\.tablet"\)' "$HYPR/hyprland.lua"; then
+  skip "hyprland.lua require present"
+else
+  bak "$HYPR/hyprland.lua"
+  echo 'require("hypr.tablet")' >> "$HYPR/hyprland.lua"
+  luac -p "$HYPR/hyprland.lua" 2>/dev/null && ok "hyprland.lua require added" \
+    || { echo "FATAL: hyprland.lua broke syntax check — restore the .bak"; exit 1; }
+fi
+
+if grep -qE '^[[:space:]]*o\.bind.*tablet-mode\.sh toggle' "$HYPR/bindings.lua"; then
+  skip "bindings.lua tablet binds present"
+else
+  bak "$HYPR/bindings.lua"
+  cat >> "$HYPR/bindings.lua" <<'EOF'
+
+-- Tablet mode + OSK (tablet-kbd package — additive, survives until next refresh).
+o.bind("SUPER + SHIFT + T", "Tablet mode toggle", "~/.config/hypr/scripts/tablet-mode.sh toggle")
+o.bind("SUPER + B", "On-screen keyboard", "~/.config/hypr/scripts/osk-toggle.sh")
+o.bind("SUPER + SHIFT + P", "Finger touch toggle", "~/.config/hypr/scripts/touch-toggle.sh toggle")
+EOF
+  luac -p "$HYPR/bindings.lua" 2>/dev/null && ok "bindings.lua binds added" \
+    || { echo "FATAL: bindings.lua broke syntax check — restore the .bak"; exit 1; }
+fi
+
+if grep -qE '^[[:space:]]*natural_scroll = true' "$HYPR/input.lua" && \
+   grep -qE '^[[:space:]]*disable_while_typing = false' "$HYPR/input.lua"; then
+  skip "input.lua touchpad settings active"
+else
+  bak "$HYPR/input.lua"
+  cat >> "$HYPR/input.lua" <<'EOF'
+
+-- tablet-kbd package (additive standalone block — merged with any above).
+hl.config({
+  input = {
+    touchpad = {
+      natural_scroll = true,
+      clickfinger_behavior = true,
+      -- Virtual-OSK key events trip libinput disable-while-typing;
+      -- on a convertible the "typing" is often the OSK itself.
+      disable_while_typing = false,
+    },
+  },
+})
+EOF
+  if luac -p "$HYPR/input.lua" 2>/dev/null; then
+    say "reloading hypr to effect-gate input settings"
+    hyprctl reload >/dev/null 2>&1; sleep 3
+    # Effect-gate (2026-09-09 hardening):
+    # - sanity: hyprctl must answer with valid JSON before we judge
+    #   (a dead/late hyprctl must never strip the appended settings)
+    # - extended poll: the reload's config evaluation is async and can
+    #   lag under install load (10 × 3s window)
+    # - policy: if unverified, KEEP the appended settings + warn — the
+    #   block is atomic (applies or not); restoring would return to the
+    #   same defaults state anyway, and tablet-verify reports honestly.
+    # - jq: `.bool | tostring` — NEVER `.bool // empty` (jq's `//` treats
+    #   false as falsy; that ate correct false values — 2026-09-09).
+    NS=""; DWT=""; HYPRCTL_OK=""
+    for _ in 1 2 3 4 5 6 7 8 9 10; do
+      NS=$(hyprctl -j getoption input:touchpad:natural_scroll 2>/dev/null | jq -r '.bool | tostring' 2>/dev/null)
+      DWT=$(hyprctl -j getoption input:touchpad:disable_while_typing 2>/dev/null | jq -r '.bool | tostring' 2>/dev/null)
+      if [[ -n $NS && -n $DWT ]]; then
+        HYPRCTL_OK=1
+        [[ $NS == true && $DWT == false ]] && break
+      fi
+      sleep 3
+    done
+    if [[ $NS == true && $DWT == false ]]; then
+      ok "input.lua touchpad settings active (effect-verified)"
+    elif [[ -n $HYPRCTL_OK ]]; then
+      echo "WARN: touchpad settings appended; effect unverified in the poll window —"
+      echo "  verify with: hyprctl getoption input:touchpad:natural_scroll · tablet-verify.sh"
+      echo "  (if genuinely not applied, re-run this installer)"
+    else
+      echo "WARN: hyprctl never answered — settings appended but unverifiable;"
+      echo "  verify manually: hyprctl getoption input:touchpad:natural_scroll · tablet-verify.sh"
+    fi
+  else
+    echo "FALLBACK: input.lua broke syntax — restoring backup, add manually (see above)"
+    LATEST=$(ls -t "$HYPR"/input.lua.bak.* | head -n 1); cp "$LATEST" "$HYPR/input.lua"
+    FAIL=1
+  fi
+fi
+
+# --- 4. Pin default (re-pin on reinstall is documented, not silent) ---
+echo custom > "$STATE/osk-backend"
+ok "SAM OSK pinned as default backend (OSK_BACKEND still overrides per-shell)"
+
+# --- 5. Coexistence report (detect only — never touch) ---
+say "other keyboards (left untouched)"
+command -v squeekboard >/dev/null 2>&1 \
+  && echo "INFO: fallback present: squeekboard (select via OSK_BACKEND=squeekboard)" \
+  || echo "INFO: fallback absent: squeekboard (optional safety net: sudo pacman -S squeekboard)"
+if command -v wvkbd >/dev/null 2>&1 || command -v wvkbd-mobintl >/dev/null 2>&1; then
+  echo "INFO: fallback present: wvkbd (select via OSK_BACKEND=wvkbd)"
+else
+  echo "INFO: fallback absent: wvkbd (optional safety net: sudo pacman -S wvkbd)"
+fi
+
+# --- 6. Final gate ---
+say "final verify"
+if [[ "$FAIL" -ne 0 ]]; then
+  if (( NO_SUDO )); then
+    echo "WARN: deployment deferred — install missing system packages, then run ./install.sh (with sudo)"
+    exit 1
+  fi
+  echo "FATAL: manual fallback steps above are required, then re-run install.sh"
+  exit 1
+fi
+"$HYPR/scripts/tablet-verify.sh" || { echo "FATAL: verify red — see FAIL lines above"; exit 1; }
+echo "install.sh: ALL GREEN — re-run anytime; verify with 'tablet-kbd-verify'"
+
+# ── Usage guide window ──────────────────────────
+# A dedicated floating pop-up that stays open until the user closes it
+# with SUPER+W — no keypress auto-close (users reflexively key-past
+# "press any key" prompts and forget the usage, seen 2026-09-09).
+# Content lives in a private state file, regenerated each install; the
+# window is deduped (re-installs replace it).
+# Private per-user state dir. Owner-checked + symlink-resistant: a planted
+# symlink at the dir or file must never redirect this write (marketplace
+# security review 2026-09-11). Atomic via temp-then-rename.
+USAGE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/tablet-kbd"
+mkdir -p "$USAGE_DIR" 2>/dev/null || true
+if [[ -L "$USAGE_DIR" ]]; then
+  echo "WARN: $USAGE_DIR is a symlink — refusing to write the usage guide there"
+  USAGE_TXT=""
+else
+  chmod 700 "$USAGE_DIR" 2>/dev/null || true
+  USAGE_TXT="$USAGE_DIR/USAGE.txt"
+fi
+if [[ -n $USAGE_TXT ]]; then
+  TMP_USAGE="$(mktemp "$USAGE_DIR/.usage.XXXXXX" 2>/dev/null)"
+  if [[ -z $TMP_USAGE || ! -w $TMP_USAGE ]]; then
+    echo "WARN: cannot create the usage guide in $USAGE_DIR — skipping the pop-up"
+    USAGE_TXT=""
+  fi
+fi
+if [[ -n $USAGE_TXT && -n ${TMP_USAGE:-} ]]; then
+cat > "$TMP_USAGE" <<'EOF'
+Tablet Mode OFF (laptop) — Usage:
+  Open SAM OSK (on-screen keyboard)   SUPER+B
+  Enter Tablet Mode                   SUPER+SHIFT+T · or tap the bar widget
+  Write with a pen (finger pauses)    SUPER+SHIFT+P · tap again to restore
+  Try a different keyboard app        OSK_BACKEND=squeekboard / wvkbd
+                                      (install one first — Omarchy ships none)
+
+Tablet Mode ON (touch) — Usage:
+  Close Tablet Mode                   3-finger swipe inward from the
+                                      left or right edge
+  Open SAM OSK (on-screen keyboard)   swipe up from the bottom edge
+                                      · 3-finger up · tap the bar widget
+  Switch windows (touch)              double-tap a window — the cursor
+                                      jumps there and it gains focus
+  Move between workspaces             3-finger swipe left / right
+
+Full guide: github.com/ngek202/tablet-kbd#usage
+This window stays open — close it with SUPER+W.
+EOF
+  chmod 600 "$TMP_USAGE"
+  # Atomic replace: rename over the target — replaces a planted symlink
+  # rather than following it (no-follow by construction, 2026-09-11).
+  mv -f "$TMP_USAGE" "$USAGE_TXT"
+fi
+if (( QUIET )); then
+  echo "install.sh: deployment complete (quiet mode; skipping usage pop-up)"
+else
+  if [[ -n $USAGE_TXT ]]; then
+    # Dedupe: replace any previous usage window (always exactly one).
+    pkill -f "title=SAM OSK Usage" 2>/dev/null || true
+    # Ensure the float/center/size windowrule (added in tablet.lua) is active.
+    hyprctl reload >/dev/null 2>&1 || true
+    sleep 0.5
+    setsid foot --title="SAM OSK Usage" -e bash -c 'cat "$0"; sleep infinity' "$USAGE_TXT" >/dev/null 2>&1 &
+    echo "Usage guide opened in a floating window (close with SUPER+W)."
+  else
+    echo "WARN: usage-guide pop-up skipped (see warnings above)."
+  fi
+
+  echo
+  echo "── Quick usage ──────────────────────────────────"
+  echo "  SUPER+B            on-screen keyboard (SAM OSK)"
+  echo "  SUPER+SHIFT+T      tablet mode on/off"
+  echo "  Double-tap a window = focus it (cursor warps there)"
+  echo "  3-finger swipe L/R = switch workspace (page)"
+  echo "  3-finger inward from left/right edge = exit tablet mode"
+  echo "  Swipe up from bottom edge = keyboard (SAM OSK)"
+fi
