@@ -64,6 +64,25 @@ tablet_detect() {
     fi
   fi
 
+  # Gesture-node pattern fallback: the default "finger|touchscreen" misses
+  # controllers whose kernel name carries no such word (e.g. FTSC1015:00,
+  # ELAN9009:00). Derive the first alnum word of the detected name and use
+  # it only if it actually matches a non-pad input in /proc.
+  if [[ -n $TABLET_FINGER && -r /proc/bus/input/devices ]]; then
+    local _derived made _hit
+    _derived=$(printf '%s' "$TABLET_FINGER" | tr '[:upper:]' '[:lower:]')
+    _derived=${_derived%%[^a-z0-9]*}
+    if [[ -n $_derived ]]; then
+      made=0
+      _hit=$(grep -iE "N:.*($_derived)" /proc/bus/input/devices 2>/dev/null \
+        | grep -viE 'touchpad|pad|unknown' | head -n 1)
+      [[ -n $_hit ]] && made=1
+      if (( made )); then
+        TABLET_FINGER_KERNEL=$(printf '%s' "$_derived" | sed 's/[][\.*^$()+{}?]/./g')
+      fi
+    fi
+  fi
+
   TABLET_OUTPUT=$(_tablet_hyprctl -j monitors | jq -r '.[]?.name // empty' | grep -m1 '^eDP')
   [[ -n $TABLET_OUTPUT ]] || TABLET_OUTPUT=$(_tablet_hyprctl -j monitors | jq -r '.[]?.name // empty' | head -n 1)
 

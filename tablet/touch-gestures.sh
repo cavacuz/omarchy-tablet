@@ -47,9 +47,11 @@ while IFS= read -r line; do
     N:*Name=*) name="$line" ;;
     H:*Handlers=*)
       # Case-insensitive match: kernel names capitalize ("Finger"),
-      # the detected pattern is lowercase.
+      # the detected pattern is lowercase. Skip digitizer/pen twins
+      # (kernel names carry an "UNKNOWN" or tablet marker).
       low=${name,,}
-      if [[ $low =~ ($TABLET_FINGER_KERNEL) ]] && [[ ! $low =~ touchpad ]]; then
+      if [[ $low =~ ($TABLET_FINGER_KERNEL) ]] && [[ ! $low =~ touchpad ]] \
+         && [[ ! $low =~ unknown ]]; then
         EVENT=$(echo "$line" | grep -o 'event[0-9]*' | head -n 1)
       fi
       name=""
