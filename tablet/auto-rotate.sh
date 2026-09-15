@@ -6,6 +6,11 @@
 #   normal=0, left-up=1, bottom-up=2, right-up=3
 set -u
 
+# Rotate lock: when this marker exists, sensor events are ignored (the
+# display keeps its current transform) until it is removed. Toggled by the
+# plugin's bar widget / a `touch-toggle.sh rotate-lock`-style command.
+LOCK="$HOME/.local/state/omarchy/toggles/hypr/rotate-lock"
+
 # Device detection (single source of truth). Keep the lazy resolve_sig:
 # at boot this service can start before Hyprland creates its socket, and
 # a once-at-startup resolution then stays broken until manual restart
@@ -92,6 +97,14 @@ pkill -x monitor-sensor 2>/dev/null || true
 # stdbuf: monitor-sensor block-buffers when piped, so orientation lines
 # would sit in libc's buffer and the service would never react. Unbuffer it.
 stdbuf -o0 -e0 monitor-sensor 2>/dev/null | while read -r line; do
+  case "$line" in
+    *"orientation changed:"*)
+      if [[ -f $LOCK ]]; then
+        printf '%s event: %s (rotation locked)\n' "$(date +%H:%M:%S)" "$line" >>"$LOG"
+        continue
+      fi
+      ;;
+  esac
   case "$line" in
     *"orientation changed: normal"*) printf '%s event: normal\n' "$(date +%H:%M:%S)" >>"$LOG"; apply 0 ;;
     *"orientation changed: left-up"*) printf '%s event: left-up\n' "$(date +%H:%M:%S)" >>"$LOG"; apply 1 ;;

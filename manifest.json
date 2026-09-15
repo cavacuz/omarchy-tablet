@@ -2,9 +2,13 @@
   "schemaVersion": 1,
   "id": "cavacuz.tablet",
   "name": "Tablet Companion",
-  "version": "0.2.0",
-  "kinds": ["service"],
+  "version": "0.3.0",
+  "kinds": ["service", "bar-widget"],
   "entryPoints": {
-    "service": "Service.qml"
+    "service": "Service.qml",
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "defaultSection": "right"
   }
 }

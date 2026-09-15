@@ -91,6 +91,16 @@ ships none — SAM OSK becomes your first.
 
 ## Usage
 
+**Bar (plugin mode):** two buttons placed in the bar's right section by
+default:
+
+- **tablet icon** — toggle Tablet Mode (same as `SUPER+SHIFT+T`)
+- **lock icon** — pause auto-rotation (the display keeps its current
+  orientation until unlocked)
+
+Both mirror the keybindings, so nothing depends on a stored layout of
+keynames — if someone re-binds `SUPER+SHIFT+T`, the button still works.
+
 **Tablet Mode OFF (laptop) — Usage:**
 
 - Open SAM OSK (on-screen keyboard): `SUPER+B`
@@ -147,9 +157,11 @@ The installer also ships a report-only `post-update.d` hook that notifies
   legacy toggles (`squeekboard-`, `wvkbd-`), `units/` (systemd user
   services)
 - `hooks/` — `tablet-verify.hook` (report-only post-update check)
-- `manifest.json` — Omarchy plugin manifest (kind `service`)
+- `manifest.json` — Omarchy plugin manifest (kinds `service` + `bar-widget`)
 - `Service.qml` — thin shell service: one-time deploy + keeps the unit
   services running (see `omarchy plugin` / IPC target `tablet`)
+- `BarWidget.qml` — top-bar buttons: tablet-mode toggle + auto-rotate
+  lock (see *Usage*)
 - `install.sh` — the installer
 
 ## Restore / safety
