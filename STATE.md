@@ -23,6 +23,7 @@ Omarchy plugin for 2-in-1 convertible laptops. Provides:
 - Shell restarted (`omarchy-restart-shell`): quickshell by-id dir `lcvn58glt`, widget loads with 1 icon, no errors in log
 - Plugin page image: `preview.png` (copy of `omarchy-tablet.png`) at repo root, synced to live plugin dir — marketplace convention requires the root file be named `preview.{png,jpg,jpeg,webp,avif}`
 - Compatibility list: `tablet-compatibility.md` (Lenovo IdeaPad Duet 3 10IGL5 = first tested row; PR instructions included) — linked from README
+- **Published to GitHub**: `https://github.com/cavacuz/omarchy-tablet` (public, `master` branch, remote `origin`). Commit `3bf1d8e` pushed. manifest.json now has `author`/`license`/`description` for the marketplace. README install URL updated to the real repo.
 
 ## What changed in this session
 

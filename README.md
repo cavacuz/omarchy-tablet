@@ -41,7 +41,7 @@ auto-rotates when you fold.
 **As an Omarchy plugin** (preferred on Omarchy):
 
 ```bash
-omarchy plugin add https://github.com/<you>/omarchy-tablet.git --enable
+omarchy plugin add https://github.com/cavacuz/omarchy-tablet.git --enable
 ```
 
 `omarchy plugin add` clones the repo into
