@@ -190,10 +190,12 @@ The installer also ships a report-only `post-update.d` hook that notifies
   `hyprctl reload` (+ `systemctl --user restart` for services).
 - Owned-file wiring is additive only; your own Hyprland content is
   never rewritten.
-- To remove the stack: disable the three units
-  (`systemctl --user disable --now auto-rotate lisgd-gestures
-  touch-cursor`), delete the `hypr.tablet` require line and the added
-  binds, and remove the `SUPER+B` keybind. Note: Omarchy ships no OSK,
+- To remove the stack: run `tablet-kbd-uninstall` (deployed to
+  `~/.config/hypr/scripts/`). It stops and removes the units, the
+  post-update hook, and every installed file, strips only the plugin's
+  own additive wiring (backed up, syntax-checked), and keeps your
+  `bindings.lua` user content intact. Then `omarchy plugin remove
+  cavacuz.tablet` to drop the bar widget. Note: Omarchy ships no OSK,
   so after removal there is no on-screen keyboard unless you install an
   alternative first (e.g. `sudo pacman -S squeekboard`, then set
   `OSK_BACKEND=squeekboard`) — or keep this stack installed and just

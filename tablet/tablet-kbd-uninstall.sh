@@ -40,14 +40,18 @@ for f in tablet-mode.sh tablet-modwait.py tablet-auto-exit.py touch-gestures.sh 
          auto-rotate.sh touch-cursor.py touch-toggle.sh osk-toggle.sh \
          custom-kbd.py custom-kbd-toggle.sh squeekboard-toggle.sh wvkbd-toggle.sh \
          tablet-verify.sh tablet-verify-interactive.sh tablet-devices.sh \
-         page-switch.sh tablet-kbd-uninstall.sh; do
+         page-switch.sh tablet-kbd-uninstall.sh keybindings-apply.sh keybindings-set.sh; do
   rm -f "$SCRIPTS/$f"
 done
 rm -rf "$HYPR/kbd-layouts" "$LOG_DIR"
+rm -f "$HYPR/tablet.lua" "$HYPR/tablet-devices.lua"
 rm -f "$STATE/osk-backend" "$STATE/tablet-mode-on" "$STATE/touch-off" \
       "$STATE/tablet-draw-on"
 echo "  installed files, layouts, state, logs removed"
 echo "  note: .bak backups are kept (your restore path)"
+echo "  note: kept user-editable state — remove manually if wanted:"
+echo "        ~/.config/hypr/tablet-keybindings.conf  (your keybindings)"
+echo "        ~/.config/hypr/tablet-devices.conf      (your device overrides)"
 
 # 5. Strip the owned wiring (additive blocks this package added — backed up)
 say "wiring"
@@ -67,11 +71,28 @@ fi
 
 if [[ -f "$HYPR/bindings.lua" ]] && grep -q 'tablet-mode.sh toggle' "$HYPR/bindings.lua"; then
   bak "$HYPR/bindings.lua"
-  sed -i '/^-- Tablet mode + OSK (tablet-kbd package/,/touch-toggle.sh toggle"$/d' "$HYPR/bindings.lua"
-  if grep -q 'tablet-mode.sh toggle' "$HYPR/bindings.lua"; then
-    echo "  WARN: some tablet binds remain outside the known block — see the .bak"
+  # Surgical strip (same patterns as keybindings-apply.sh): drop only the
+  # marker comment and our own binding lines. NEVER a sed range — the block
+  # is not guaranteed to be last, and an unclosed range would eat every
+  # user binding below it.
+  TMP=$(mktemp)
+  awk '/^-- Tablet mode \+ OSK / ||
+       /tablet-mode\.sh toggle/ ||
+       /osk-toggle\.sh/ ||
+       /touch-toggle\.sh toggle/ { next }
+       { print }' "$HYPR/bindings.lua" > "$TMP"
+  if ! luac -p "$TMP" 2>/dev/null; then
+    echo "  WARN: bindings.lua fails syntax check after strip — restoring the backup"
+    rm -f "$TMP"
+    LATEST=$(ls -t "$HYPR"/bindings.lua.uninstall-backup.* | head -n 1)
+    cp "$LATEST" "$HYPR/bindings.lua"
   else
-    echo "  removed: tablet binds block"
+    mv "$TMP" "$HYPR/bindings.lua"
+    if grep -q 'tablet-mode.sh toggle' "$HYPR/bindings.lua"; then
+      echo "  WARN: some tablet binds remain outside the known block — see the .bak"
+    else
+      echo "  removed: tablet binds block"
+    fi
   fi
 fi
 
@@ -99,7 +120,7 @@ else
   echo "tablet-kbd removed WITH WARNINGS — check the files above."
 fi
 echo "Also consider:"
-echo "  omarchy plugin remove io.github.ngek202.tablet-toggle   (the bar widget)"
+echo "  omarchy plugin remove cavacuz.tablet   (the bar widget)"
 echo "  sudo pacman -R tablet-kbd-git                           (AUR: system share)"
 echo "Note: Omarchy ships no OSK by default — after this there is no"
 echo "on-screen keyboard unless you install an alternative."
