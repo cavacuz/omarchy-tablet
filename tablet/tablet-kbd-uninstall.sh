@@ -3,8 +3,8 @@
 # Reverses install.sh: units, post-update hook, installed files, the
 # additive wiring blocks (backed up first — your own content is never
 # touched), state files, private logs, and the usage-guide window.
-# Idempotent: missing files are skipped. AUR installs also run
-# `sudo pacman -R tablet-kbd-git` to remove the system share.
+# Idempotent: missing files are skipped. No system/AUR package is
+# installed by this plugin, so nothing to remove there.
 # Usage: tablet-kbd-uninstall
 set -u
 
@@ -121,6 +121,7 @@ else
 fi
 echo "Also consider:"
 echo "  omarchy plugin remove cavacuz.tablet   (the bar widget)"
-echo "  sudo pacman -R tablet-kbd-git                           (AUR: system share)"
+echo "Note: no system/AUR package is installed by this plugin — the"
+echo "AUR package of the original tablet-kbd project is unrelated."
 echo "Note: Omarchy ships no OSK by default — after this there is no"
 echo "on-screen keyboard unless you install an alternative."
