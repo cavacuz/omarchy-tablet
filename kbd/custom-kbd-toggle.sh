@@ -22,7 +22,7 @@ do_show() {
     # Keep stderr (incl. GLib fatals) for crash diagnosis — in a PRIVATE
     # per-user dir, never shared /tmp (symlink/truncation attack surface,
     # marketplace security review 2026-09-08).
-    LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/tablet-kbd/logs"
+    LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/tablet-companion/logs"
     OSK_STDERR_LOG="$LOG_DIR/osk-stderr.log"
     mkdir -p "$LOG_DIR" && chmod 700 "$LOG_DIR"
     if [ -L "$OSK_STDERR_LOG" ] || { [ -e "$OSK_STDERR_LOG" ] && [ ! -f "$OSK_STDERR_LOG" ]; }; then

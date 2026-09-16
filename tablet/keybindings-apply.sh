@@ -44,7 +44,7 @@ to_hypr_mods() {
 }
 
 # Build new tablet binding lines.
-NEW_BLOCK="-- Tablet mode + OSK (tablet-kbd package — editable via the bar-widget gear)."
+NEW_BLOCK="-- Tablet mode + OSK (tablet-companion package — editable via the bar-widget gear)."
 while IFS='=' read -r name keys; do
   name="${name%%#*}"     # strip comments
   name="$(echo "$name" | tr -d '[:space:]')"

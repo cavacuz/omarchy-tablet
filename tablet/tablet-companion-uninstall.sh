@@ -1,11 +1,11 @@
 #!/bin/bash
-# tablet-kbd-uninstall — remove the per-user tablet-kbd setup.
+# tablet-companion-uninstall — remove the per-user tablet-companion setup.
 # Reverses install.sh: units, post-update hook, installed files, the
 # additive wiring blocks (backed up first — your own content is never
 # touched), state files, private logs, and the usage-guide window.
 # Idempotent: missing files are skipped. No system/AUR package is
 # installed by this plugin, so nothing to remove there.
-# Usage: tablet-kbd-uninstall
+# Usage: tablet-companion-uninstall
 set -u
 
 HYPR="$HOME/.config/hypr"
@@ -13,7 +13,7 @@ SCRIPTS="$HYPR/scripts"
 UNITDIR="$HOME/.config/systemd/user"
 HOOKDIR="$HOME/.config/omarchy/hooks/post-update.d"
 STATE="$HOME/.local/state/omarchy/toggles/hypr"
-LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/tablet-kbd"
+LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/tablet-companion"
 
 say() { echo "-- $1"; }
 
@@ -40,7 +40,7 @@ for f in tablet-mode.sh tablet-modwait.py tablet-auto-exit.py touch-gestures.sh 
          auto-rotate.sh touch-cursor.py touch-toggle.sh osk-toggle.sh \
          custom-kbd.py custom-kbd-toggle.sh squeekboard-toggle.sh wvkbd-toggle.sh \
          tablet-verify.sh tablet-verify-interactive.sh tablet-devices.sh \
-         page-switch.sh tablet-kbd-uninstall.sh keybindings-apply.sh keybindings-set.sh; do
+         page-switch.sh tablet-companion-uninstall.sh keybindings-apply.sh keybindings-set.sh; do
   rm -f "$SCRIPTS/$f"
 done
 rm -rf "$HYPR/kbd-layouts" "$LOG_DIR"
@@ -96,9 +96,9 @@ if [[ -f "$HYPR/bindings.lua" ]] && grep -q 'tablet-mode.sh toggle' "$HYPR/bindi
   fi
 fi
 
-if [[ -f "$HYPR/input.lua" ]] && grep -q 'tablet-kbd package (additive standalone block' "$HYPR/input.lua"; then
+if [[ -f "$HYPR/input.lua" ]] && grep -qE 'tablet-(companion|kbd) package \(additive standalone block' "$HYPR/input.lua"; then
   bak "$HYPR/input.lua"
-  START=$(grep -n 'tablet-kbd package (additive standalone block' "$HYPR/input.lua" | cut -d: -f1)
+  START=$(grep -nE 'tablet-(companion|kbd) package \(additive standalone block' "$HYPR/input.lua" | cut -d: -f1)
   END=$(awk -v s="$START" 'NR>=s && /^\}[)]/{print NR; exit}' "$HYPR/input.lua")
   if [[ -n $START && -n $END ]]; then
     sed -i "${START},${END}d" "$HYPR/input.lua"
@@ -115,13 +115,13 @@ hyprctl reload >/dev/null 2>&1 || true
 
 echo
 if [[ $BAD -eq 0 ]]; then
-  echo "tablet-kbd per-user setup removed. Hyprland reloaded."
+  echo "tablet-companion per-user setup removed. Hyprland reloaded."
 else
-  echo "tablet-kbd removed WITH WARNINGS — check the files above."
+  echo "tablet-companion removed WITH WARNINGS — check the files above."
 fi
 echo "Also consider:"
 echo "  omarchy plugin remove cavacuz.tablet   (the bar widget)"
 echo "Note: no system/AUR package is installed by this plugin — the"
-echo "AUR package of the original tablet-kbd project is unrelated."
+echo "AUR package of the original tablet-companion project is unrelated."
 echo "Note: Omarchy ships no OSK by default — after this there is no"
 echo "on-screen keyboard unless you install an alternative."

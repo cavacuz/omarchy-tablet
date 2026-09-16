@@ -7,7 +7,7 @@
 # flagged by the marketplace security review 2026-09-08).
 set -e
 
-LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/tablet-kbd/logs"
+LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/tablet-companion/logs"
 LOG="$LOG_DIR/tablet-verify-postupdate.log"
 mkdir -p "$LOG_DIR" && chmod 700 "$LOG_DIR"
 # no-follow/regular-file guard: a symlink or non-regular file at the

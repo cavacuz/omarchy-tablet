@@ -183,6 +183,16 @@ The installer also ships a report-only `post-update.d` hook that notifies
   `preview.{png,jpg,jpeg,webp,avif}` (max 50 MB / 40 MP) per the
   marketplace submission rules.
 
+## Acknowledgements
+
+The tablet-wiring architecture, OSK integration, and service layout are
+based on [ngek202/tablet-kbd](https://github.com/ngek202/tablet-kbd)
+(GPL-3.0) and its companion
+[Tablet Toggle](https://github.com/ngek202/tablet-toggle) bar widget.
+This project is a clean reimplementation with additional features
+(configurable keybindings, single-button group widget, compatibility
+list).
+
 ## Restore / safety
 
 - The installer backs up anything it replaces (`.bak.<ts>` beside the
@@ -190,7 +200,7 @@ The installer also ships a report-only `post-update.d` hook that notifies
   `hyprctl reload` (+ `systemctl --user restart` for services).
 - Owned-file wiring is additive only; your own Hyprland content is
   never rewritten.
-- To remove the stack: run `tablet-kbd-uninstall` (deployed to
+- To remove the stack: run `tablet-companion-uninstall` (deployed to
   `~/.config/hypr/scripts/`). It stops and removes the units, the
   post-update hook, and every installed file, strips only the plugin's
   own additive wiring (backed up, syntax-checked), and keeps your

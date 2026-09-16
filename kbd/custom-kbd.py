@@ -20,7 +20,7 @@ def _safe_crash_log(name):
     attack surface, marketplace security review 2026-09-08)."""
     log_dir = os.path.join(
         os.environ.get("XDG_STATE_HOME", os.path.expanduser("~/.local/state")),
-        "tablet-kbd", "logs")
+        "tablet-companion", "logs")
     os.makedirs(log_dir, mode=0o700, exist_ok=True)
     try:
         os.chmod(log_dir, 0o700)
