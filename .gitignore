@@ -1,2 +1,4 @@
 *.pyc
 __pycache__/
+# local session notes (never published)
+STATE.md

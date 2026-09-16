@@ -1,7 +1,5 @@
 # Convertible Tablet + SAM OSK
 
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ngek202-yellow)](https://www.buymeacoffee.com/ngek202)
-
 **For the moments your laptop becomes a tablet** — presenting, notes in
 meetings, reading, watching, or just lounging with touch. Built for 2-in-1
 **convertible laptops** on **Omarchy / Hyprland** (Arch-based, Wayland),
@@ -34,7 +32,9 @@ one tap away (`SUPER+SHIFT+T` or the bar widget); the screen still
 auto-rotates when you fold.
 
 - **License:** GPL-3.0 (see `LICENSE`)
-- **Companion bar-widget:** https://github.com/ngek202/tablet-toggle (separate repo)
+- **Bar widget included** — a single control (tablet icon → popup with the
+  tablet-mode toggle, auto-rotate lock, and keybinding editor), no separate
+  repo needed
 
 ## Install
 
@@ -58,7 +58,7 @@ omarchy plugin enable cavacuz.tablet
 **Standalone** (any Arch-based system):
 
 ```bash
-git clone https://github.com/ngek202/tablet-kbd.git && ./tablet-kbd/install.sh
+git clone https://github.com/cavacuz/omarchy-tablet.git && ./omarchy-tablet/install.sh
 ```
 
 `install.sh [--no-sudo] [--quiet]`:

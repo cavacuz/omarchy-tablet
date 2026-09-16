@@ -114,7 +114,7 @@ if python3 -c "
 import json,sys
 cfg=json.load(open('$HOME/.config/omarchy/shell.json'))
 blob=json.dumps(cfg)
-sys.exit(0 if 'io.github.ngek202.tablet-toggle' in blob else 1)" 2>/dev/null; then
+sys.exit(0 if 'cavacuz.tablet' in blob else 1)" 2>/dev/null; then
   pass "toggle widget placed in bar"
 else
   echo "WARN: toggle widget id not found in shell.json (ok if moved/removed deliberately)"

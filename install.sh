@@ -316,7 +316,7 @@ Tablet Mode ON (touch) — Usage:
                                       jumps there and it gains focus
   Move between workspaces             3-finger swipe left / right
 
-Full guide: github.com/ngek202/tablet-kbd#usage
+Full guide: github.com/cavacuz/omarchy-tablet
 This window stays open — close it with SUPER+W.
 EOF
   chmod 600 "$TMP_USAGE"
