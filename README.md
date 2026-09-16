@@ -82,6 +82,9 @@ ships none — SAM OSK becomes your first.
 
 ## Requirements
 
+Tested hardware and how to add your own: see
+[`tablet-compatibility.md`](tablet-compatibility.md).
+
 - A **convertible laptop** with a touch digitizer (internal display
   preferred for rotation)
 - Arch-based system (Omarchy recommended)
@@ -91,15 +94,21 @@ ships none — SAM OSK becomes your first.
 
 ## Usage
 
-**Bar (plugin mode):** two buttons placed in the bar's right section by
-default:
+**Bar (plugin mode):** one button (tablet icon) in the bar's right section:
 
-- **tablet icon** — toggle Tablet Mode (same as `SUPER+SHIFT+T`)
-- **lock icon** — pause auto-rotation (the display keeps its current
-  orientation until unlocked)
+- **tap the icon** — opens a group popup with all controls:
+  - **Tablet mode** toggle (highlighted when active)
+  - **Auto-rotate lock** toggle (highlighted when locked)
+  - **Keybindings** section: edit the three shortcuts (tablet toggle, OSK,
+    finger touch) and hit **Save** to apply them live (Hyprland rebinds
+    instantly; no shell reload). **Reset** restores defaults. Bindings are
+    stored in `~/.config/hypr/tablet-keybindings.conf` so they can also
+    be edited by hand.
+- The bar icon itself lights up when Tablet Mode is active.
 
-Both mirror the keybindings, so nothing depends on a stored layout of
-keynames — if someone re-binds `SUPER+SHIFT+T`, the button still works.
+Both toggle buttons mirror the keybindings, so nothing depends on a stored
+layout of keynames — if someone re-binds `SUPER+SHIFT+T`, the button still
+works.
 
 **Tablet Mode OFF (laptop) — Usage:**
 
@@ -152,6 +161,8 @@ The installer also ships a report-only `post-update.d` hook that notifies
 - `tablet/` — tablet wiring: `tablet-mode.sh`, `tablet-modwait.py`,
   `tablet-auto-exit.py`, `touch-gestures.sh` (lisgd), `auto-rotate.sh`,
   `touch-cursor.py`, `touch-toggle.sh`, `tablet.lua`,
+  `tablet-keybindings.conf` (user-editable shortcut list),
+  `keybindings-apply.sh` + `keybindings-set.sh` (live rebind),
   `tablet-devices.sh` (detection), `tablet-verify.sh`,
   `tablet-verify-interactive.sh`, `page-switch.sh` (page scrolling),
   legacy toggles (`squeekboard-`, `wvkbd-`), `units/` (systemd user
@@ -163,6 +174,14 @@ The installer also ships a report-only `post-update.d` hook that notifies
 - `BarWidget.qml` — top-bar buttons: tablet-mode toggle + auto-rotate
   lock (see *Usage*)
 - `install.sh` — the installer
+
+## Marketplace / plugin page
+
+- `preview.png` (root) is the card image for the Omarchy plugins page —
+  the marketplace optimizes it into card and detail images automatically.
+  The source file is `omarchy-tablet.png`. Keep the preview at
+  `preview.{png,jpg,jpeg,webp,avif}` (max 50 MB / 40 MP) per the
+  marketplace submission rules.
 
 ## Restore / safety
 

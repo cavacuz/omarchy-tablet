@@ -96,7 +96,7 @@ for s in tablet-mode.sh tablet-modwait.py tablet-auto-exit.py touch-gestures.sh 
          auto-rotate.sh touch-cursor.py touch-toggle.sh osk-toggle.sh \
          custom-kbd.py custom-kbd-toggle.sh squeekboard-toggle.sh wvkbd-toggle.sh \
          tablet-verify.sh tablet-verify-interactive.sh tablet-devices.sh \
-         page-switch.sh tablet-kbd-uninstall.sh; do
+         page-switch.sh tablet-kbd-uninstall.sh keybindings-apply.sh keybindings-set.sh; do
   src=""
   [[ -f "$REPO/tablet/$s" ]] && src="$REPO/tablet/$s"
   [[ -f "$REPO/kbd/$s" ]] && src="$REPO/kbd/$s"
@@ -106,6 +106,12 @@ done
 [[ -f "$REPO/kbd/layouts/en.json" ]] || { echo "FATAL: en.json not in repo"; exit 1; }
 sync_file "$REPO/kbd/layouts/en.json" "$HYPR/kbd-layouts/en.json"
 sync_file "$REPO/tablet/tablet.lua" "$HYPR/tablet.lua"
+if [[ ! -f "$HYPR/tablet-keybindings.conf" ]]; then
+  cp "$REPO/tablet/tablet-keybindings.conf" "$HYPR/tablet-keybindings.conf" \
+    && ok "tablet-keybindings.conf created (default keybindings)"
+else
+  skip "tablet-keybindings.conf already present (user keybindings kept)"
+fi
 for u in auto-rotate.service lisgd-gestures.service touch-cursor.service; do
   sync_file "$REPO/tablet/units/$u" "$UNITDIR/$u"
 done
@@ -171,15 +177,12 @@ if grep -qE '^[[:space:]]*o\.bind.*tablet-mode\.sh toggle' "$HYPR/bindings.lua";
   skip "bindings.lua tablet binds present"
 else
   bak "$HYPR/bindings.lua"
-  cat >> "$HYPR/bindings.lua" <<'EOF'
-
--- Tablet mode + OSK (tablet-kbd package — additive, survives until next refresh).
-o.bind("SUPER + SHIFT + T", "Tablet mode toggle", "~/.config/hypr/scripts/tablet-mode.sh toggle")
-o.bind("SUPER + B", "On-screen keyboard", "~/.config/hypr/scripts/osk-toggle.sh")
-o.bind("SUPER + SHIFT + P", "Finger touch toggle", "~/.config/hypr/scripts/touch-toggle.sh toggle")
-EOF
-  luac -p "$HYPR/bindings.lua" 2>/dev/null && ok "bindings.lua binds added" \
-    || { echo "FATAL: bindings.lua broke syntax check — restore the .bak"; exit 1; }
+  if "$HYPR/scripts/keybindings-apply.sh"; then
+    ok "bindings.lua tablet binds added (from tablet-keybindings.conf)"
+  else
+    echo "FATAL: keybindings-apply.sh failed — restore the .bak manually, then re-run"
+    exit 1
+  fi
 fi
 
 if grep -qE '^[[:space:]]*natural_scroll = true' "$HYPR/input.lua" && \
