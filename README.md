@@ -65,7 +65,8 @@ git clone https://github.com/cavacuz/omarchy-tablet.git && ./omarchy-tablet/inst
 
 The installer is idempotent and backs up anything it replaces. It:
 
-1. Installs missing dependencies.
+1. Installs missing dependencies from the official repos (checks for
+   `lisgd` and reports it as a manual, externally managed dependency).
 2. Copies SAM OSK, its layouts, the tablet wiring, systemd units, and the
    report-only post-update hook.
 3. Detects your devices (touch / keyboard / touchpad / internal display)
@@ -88,9 +89,12 @@ Tested hardware and how to add your own: see
 - A **convertible laptop** with a touch digitizer (internal display
   preferred for rotation)
 - Arch-based system (Omarchy recommended)
-- Installer pulls these automatically:
-  - **Official repos:** `wtype`, `python-gobject`, `gtk4`, `gtk4-layer-shell`
-  - **AUR (via `yay`):** `lisgd` (the gesture daemon)
+- Installer pulls these automatically (official repos): `wtype`,
+  `python-gobject`, `gtk4`, `gtk4-layer-shell`
+- **`lisgd`** (the gesture daemon) is **not auto-installed** — it is an
+  externally managed dependency, so install it yourself (the installer
+  never pulls from the mutating AUR): `yay -S lisgd` (or your AUR
+  helper), then run `install.sh`
 
 ## Usage
 

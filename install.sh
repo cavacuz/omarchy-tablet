@@ -56,36 +56,36 @@ sync_file() {
   ok "$(basename "$dst") installed"
 }
 
-# --- 1. Dependencies (Arch-native: pacman, yay for AUR) ---
+# --- 1. Dependencies ---
+# Official-repo packages are auto-installed below. lisgd (the gesture
+# daemon, AUR-only) is deliberately NOT auto-installed: the marketplace
+# security review rejects pulling a mutable AUR package without a pinned
+# checksum, so lisgd stays an externally managed dependency — we check
+# for it and point the user at a manual install instead.
 say "dependencies"
 OFFICIAL=(wtype python-gobject gtk4 gtk4-layer-shell)
 MISSING=()
 for p in "${OFFICIAL[@]}"; do
   pacman -Q "$p" >/dev/null 2>&1 && ok "$p present" || MISSING+=("$p")
 done
-MISSING_AUR=()
-if pacman -Q lisgd >/dev/null 2>&1; then
+if command -v lisgd >/dev/null 2>&1; then
   ok "lisgd present"
 else
-  MISSING_AUR=(lisgd)
+  echo "WARN: lisgd (the gesture daemon) is NOT installed."
+  echo "      It is not auto-installed — install it yourself so its source stays"
+  echo "      under your control, then re-run install.sh:"
+  echo "        yay -S lisgd    # or your AUR helper of choice"
+  FAIL=1
 fi
 if (( NO_SUDO )); then
   if (( ${#MISSING[@]} > 0 )); then
     echo "WARN: missing official packages (install manually): ${MISSING[*]}"
     FAIL=1
   fi
-  if (( ${#MISSING_AUR[@]} > 0 )); then
-    echo "WARN: missing AUR packages (install manually): ${MISSING_AUR[*]}"
-    FAIL=1
-  fi
 else
   if (( ${#MISSING[@]} > 0 )); then
     say "installing missing official packages: ${MISSING[*]}"
     sudo pacman -S --needed "${MISSING[@]}" || { echo "FATAL: pacman install failed"; exit 1; }
-  fi
-  if (( ${#MISSING_AUR[@]} > 0 )); then
-    say "installing missing AUR packages: ${MISSING_AUR[*]}"
-    yay -S --needed "${MISSING_AUR[@]}" || { echo "FATAL: yay install failed"; exit 1; }
   fi
 fi
 
@@ -264,7 +264,7 @@ fi
 say "final verify"
 if [[ "$FAIL" -ne 0 ]]; then
   if (( NO_SUDO )); then
-    echo "WARN: deployment deferred — install missing system packages, then run ./install.sh (with sudo)"
+    echo "WARN: deployment deferred — resolve the missing deps listed above, then run ./install.sh"
     exit 1
   fi
   echo "FATAL: manual fallback steps above are required, then re-run install.sh"

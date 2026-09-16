@@ -100,6 +100,13 @@ else
   fi
 fi
 
+# --- 3.6 Gesture daemon (externally managed — never auto-installed) ---
+if command -v lisgd >/dev/null 2>&1; then
+  pass "lisgd present (gesture daemon)"
+else
+  fail "lisgd not installed — gestures are disabled; install it via your AUR helper, then re-run install.sh"
+fi
+
 # --- 4. Systemd units enabled ---
 for u in auto-rotate.service lisgd-gestures.service touch-cursor.service; do
   if systemctl --user is-enabled "$u" >/dev/null 2>&1; then
