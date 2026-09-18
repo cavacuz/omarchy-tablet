@@ -43,11 +43,21 @@ for f in tablet-mode.sh tablet-modwait.py tablet-auto-exit.py touch-gestures.sh 
          page-switch.sh tablet-companion-uninstall.sh keybindings-apply.sh keybindings-set.sh; do
   rm -f "$SCRIPTS/$f"
 done
-rm -rf "$HYPR/kbd-layouts" "$LOG_DIR"
+# Remove ONLY the layout this plugin installs (en.json). rmdir then drops
+# the dir only if it is now empty — it never follows symlinks and never
+# deletes unrelated layouts, so user/other-plugin entries and any
+# symlinked layout dir are left untouched.
+if [[ ! -L "$HYPR/kbd-layouts" ]]; then
+  rm -f "$HYPR/kbd-layouts/en.json"
+  rmdir "$HYPR/kbd-layouts" 2>/dev/null || true
+else
+  echo "  note: kbd-layouts is a symlink — left untouched, no deletion"
+fi
+rm -rf "$LOG_DIR"
 rm -f "$HYPR/tablet.lua" "$HYPR/tablet-devices.lua"
 rm -f "$STATE/osk-backend" "$STATE/tablet-mode-on" "$STATE/touch-off" \
       "$STATE/tablet-draw-on"
-echo "  installed files, layouts, state, logs removed"
+echo "  files removed; only kbd-layouts/en.json was our layout (dir kept if non-empty)"
 echo "  note: .bak backups are kept (your restore path)"
 echo "  note: kept user-editable state — remove manually if wanted:"
 echo "        ~/.config/hypr/tablet-keybindings.conf  (your keybindings)"

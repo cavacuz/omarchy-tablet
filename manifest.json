@@ -3,7 +3,7 @@
   "id": "cavacuz.tablet",
   "name": "Tablet Companion",
   "description": "2-in-1 convertible companion: on-screen keyboard (SAM OSK), tablet mode, auto-rotate, page scrolling, and a bar widget to control it all.",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "author": "cavacuz",
   "license": "GPL-3.0",
   "kinds": ["service", "bar-widget"],
