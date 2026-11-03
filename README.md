@@ -48,8 +48,10 @@ omarchy plugin add https://github.com/cavacuz/omarchy-tablet.git --enable
 `~/.config/omarchy/plugins/cavacuz.tablet/` and validates it against the
 plugin manifest schema. The bundled `Service.qml` deploys the stack on
 first shell load (idempotent — runs `install.sh --no-sudo --quiet`,
-which installs files + systemd units and enables the services), then
-keeps the three unit services
+which installs files + systemd units and enables the services), and
+again once after `omarchy plugin update` brings a new version (the
+deploy marker records the manifest version; running services are
+restarted onto the new files), then keeps the three unit services
 
 ```bash
 omarchy plugin enable cavacuz.tablet
@@ -90,7 +92,15 @@ Tested hardware and how to add your own: see
   preferred for rotation)
 - Arch-based system (Omarchy recommended)
 - Installer pulls these automatically (official repos): `wtype`,
-  `python-gobject`, `gtk4`, `gtk4-layer-shell`
+  `python-gobject`, `gtk4`, `gtk4-layer-shell`, `iio-sensor-proxy`
+  (accelerometer → `monitor-sensor`, required for auto-rotate), `jq`
+- **Conflicts:** display-layout managers that re-apply a remembered
+  layout undo auto-rotation. **Better Displays Pro**
+  (`io.github.dragosol.better-displays-pro`) restores transform 0 within
+  seconds of a 90° turn, leaving touch rotated against an unrotated
+  screen. Disable it on convertibles:
+  `omarchy plugin disable io.github.dragosol.better-displays-pro`
+  (`tablet-verify.sh` warns when it is enabled)
 - **`lisgd`** (the gesture daemon) is **not auto-installed** — it is an
   externally managed dependency, so install it yourself (the installer
   never pulls from the mutating AUR): `yay -S lisgd` (or your AUR

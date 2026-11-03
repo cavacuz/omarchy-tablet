@@ -90,6 +90,15 @@ apply() {
   fi
 }
 
+# Missing monitor-sensor used to end the pipeline instantly with exit 0
+# (stderr discarded), so systemd restart-looped forever with no trace.
+# Fail loudly instead: a clear journal line + non-zero exit.
+if ! command -v monitor-sensor >/dev/null 2>&1; then
+  echo "auto-rotate: monitor-sensor not found — install iio-sensor-proxy (sudo pacman -S iio-sensor-proxy)" >&2
+  printf '%s FATAL: monitor-sensor missing (install iio-sensor-proxy)\n' "$(date +%H:%M:%S)" >>"$LOG"
+  exit 1
+fi
+
 # Exact-name match only: -f patterns here would match our own shell's
 # command line (it contains these words) and kill it.
 pkill -x monitor-sensor 2>/dev/null || true

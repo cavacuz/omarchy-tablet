@@ -107,6 +107,24 @@ else
   fail "lisgd not installed — gestures are disabled; install it via your AUR helper, then re-run install.sh"
 fi
 
+# --- 3.7 Orientation source for auto-rotate ---
+if command -v monitor-sensor >/dev/null 2>&1; then
+  pass "monitor-sensor present (iio-sensor-proxy, auto-rotate)"
+else
+  fail "monitor-sensor missing — auto-rotate cannot work; sudo pacman -S iio-sensor-proxy"
+fi
+
+# --- 3.8 Display-layout managers that undo auto-rotate (warn-only) ---
+# Better Displays Pro restores its remembered layout whenever a 90° turn
+# changes the panel's dimensions, snapping the screen back to transform 0
+# within seconds while touch stays rotated (seen 2026-11-03, Latitude
+# 5290 2-in-1). Warn rather than fail: disabling it is the user's call.
+if command -v omarchy >/dev/null 2>&1 && \
+   [[ $(omarchy plugin list 2>/dev/null | awk '$1=="io.github.dragosol.better-displays-pro"{print $2}') == enabled ]]; then
+  echo "WARN: Better Displays Pro is enabled — it reverts auto-rotation; disable with:"
+  echo "      omarchy plugin disable io.github.dragosol.better-displays-pro"
+fi
+
 # --- 4. Systemd units enabled ---
 for u in auto-rotate.service lisgd-gestures.service touch-cursor.service; do
   if systemctl --user is-enabled "$u" >/dev/null 2>&1; then

@@ -1,6 +1,10 @@
 [Unit]
-Description=Auto-rotate internal display + Wacom pen/touch (Portege X30W-J)
+Description=Auto-rotate internal display + touch (iio-sensor-proxy)
 After=default.target
+# A missing dependency must not spin forever: give up after 5 fast
+# failures (see journal) instead of thousands of silent restarts.
+StartLimitIntervalSec=60
+StartLimitBurst=5
 
 [Service]
 Type=simple

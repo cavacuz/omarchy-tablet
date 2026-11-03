@@ -8,6 +8,7 @@ auto-rotate, page scrolling). Add yours with a PR — see
 
 | Device | Touch device (Hyprland name) | Internal display | Tablet mode | Auto-rotate | Page scroll | Notes |
 |--------|------------------------------|-----------------|:-----------:|:-----------:|:-----------:|-------|
+| Dell Latitude 5290 2-in-1 | `wacom-hid-484d-finger` | `eDP-1` (1920×1280) | — | ✅ | — | Sensors via HID sensor hub (`accel_3d`); needs `iio-sensor-proxy` (not on stock install). Better Displays Pro must be disabled or it reverts rotation. Tablet mode / page scroll not yet verified. |
 | Lenovo IdeaPad Duet 3 10IGL5 (82AT) | `ftsc1015:00-2808:1015` (kernel `ftsc1015`) | `DSI-1` (1200×1920) | ✅ | ✅ | ✅ | OSK backend `custom` (SAM). Detachable keyboard reports as `hailuck-co.-ltd-duet-3-usb-composite-device` (+ `-touchpad`); keyboard/touchpad come and go with the cover. |
 
 ## Untested / reported

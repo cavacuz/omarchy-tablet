@@ -24,13 +24,18 @@ Item {
   }
 
   function deployCmd() {
-    // File install + service enable. Runs once (marker in user state).
-    // Otherwise never touches anything after the stack is up.
+    // File install + service enable. Runs once per plugin version: the
+    // marker holds the manifest version that was deployed, so an
+    // `omarchy plugin update` to a new version redeploys the installed
+    // scripts/units once (a bare marker left updated users on stale
+    // copies). Otherwise never touches anything after the stack is up.
     return 'set -e; ' +
       'M="$HOME/.local/state/omarchy-tablet/deployed"; ' +
-      'if [[ ! -f $M ]]; then ' +
+      'V=$(sed -n \'s/.*"version"[[:space:]]*:[[:space:]]*"\\([^"]*\\)".*/\\1/p\' ' +
+        JSON.stringify(pluginDir + "/manifest.json") + ' | head -n 1); ' +
+      'if [[ ! -f $M || $(cat "$M") != "$V" ]]; then ' +
       '  /bin/bash ' + JSON.stringify(pluginDir + "/install.sh") + ' --no-sudo --quiet; ' +
-      '  mkdir -p "$(dirname "$M")"; : > "$M"; ' +
+      '  mkdir -p "$(dirname "$M")"; printf "%s" "$V" > "$M"; ' +
       'fi; ' +
       'systemctl --user enable --now auto-rotate.service lisgd-gestures.service touch-cursor.service && ' +
       'systemctl --user is-active auto-rotate.service'

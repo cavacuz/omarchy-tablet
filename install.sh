@@ -51,10 +51,16 @@ sync_file() {
     fi
     bak "$dst" >/dev/null
   fi
-  cp "$src" "$dst" || { echo "FATAL: cannot copy $src"; exit 1; }
-  [[ -n "$mode" ]] && chmod "$mode" "$dst"
+  # Copy to a temp file and rename over the target: a new inode, so a
+  # running bash script (auto-rotate.sh under systemd) keeps reading its
+  # old copy instead of a half-overwritten file.
+  cp "$src" "$dst.tmp.$$" || { rm -f "$dst.tmp.$$"; echo "FATAL: cannot copy $src"; exit 1; }
+  [[ -n "$mode" ]] && chmod "$mode" "$dst.tmp.$$"
+  mv -f "$dst.tmp.$$" "$dst" || { rm -f "$dst.tmp.$$"; echo "FATAL: cannot install $dst"; exit 1; }
+  SYNCED=1
   ok "$(basename "$dst") installed"
 }
+SYNCED=0
 
 # --- 1. Dependencies ---
 # Official-repo packages are auto-installed below. lisgd (the gesture
@@ -63,7 +69,11 @@ sync_file() {
 # checksum, so lisgd stays an externally managed dependency — we check
 # for it and point the user at a manual install instead.
 say "dependencies"
-OFFICIAL=(wtype python-gobject gtk4 gtk4-layer-shell)
+# iio-sensor-proxy provides monitor-sensor (auto-rotate's orientation
+# source); jq parses hyprctl output. Neither is guaranteed on a stock
+# install (a Dell Latitude 5290 2-in-1 shipped without iio-sensor-proxy
+# and auto-rotate silently restart-looped, 2026-11-03).
+OFFICIAL=(wtype python-gobject gtk4 gtk4-layer-shell iio-sensor-proxy jq)
 MISSING=()
 for p in "${OFFICIAL[@]}"; do
   pacman -Q "$p" >/dev/null 2>&1 && ok "$p present" || MISSING+=("$p")
@@ -119,6 +129,13 @@ systemctl --user daemon-reload
 for u in auto-rotate.service lisgd-gestures.service touch-cursor.service; do
   systemctl --user enable --now "$u" && ok "enabled $u" || { echo "FATAL: cannot enable $u"; exit 1; }
 done
+# An update replaced scripts/units under running services: restart the
+# ones already running so they pick up the new code (try-restart leaves
+# stopped units alone).
+if (( SYNCED )); then
+  systemctl --user try-restart auto-rotate.service lisgd-gestures.service touch-cursor.service \
+    && ok "services restarted (updated files)"
+fi
 cp "$REPO/hooks/tablet-verify.hook" "$HOOKDIR/tablet-verify.hook" \
   && chmod +x "$HOOKDIR/tablet-verify.hook" && ok "post-update hook (report-only)"
 
