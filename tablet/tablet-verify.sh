@@ -103,7 +103,15 @@ fi
 # --- 3.6 Optional features (INFO only — never FAIL; they switch on by
 # themselves once the package is present, via tablet-services.sh) ---
 if command -v lisgd >/dev/null 2>&1; then
-  pass "lisgd present (gestures on)"
+  pass "lisgd present"
+  # lisgd reads the raw touchscreen node (root:input 0660).
+  if id -nG | tr ' ' '\n' | grep -qx input; then
+    pass "input group active (gestures on)"
+  elif id -nG "$(id -un)" 2>/dev/null | tr ' ' '\n' | grep -qx input; then
+    echo "INFO: added to the 'input' group but this session predates it — log out and back in (gestures off)"
+  else
+    echo "INFO: not in the 'input' group — gestures off; sudo usermod -aG input $(id -un), then log out and back in"
+  fi
 else
   echo "INFO: lisgd not installed — gestures off (optional; AUR, e.g. 'yay -S lisgd')"
 fi
@@ -128,6 +136,10 @@ fi
 for entry in touch-cursor.service: auto-rotate.service:monitor-sensor lisgd-gestures.service:lisgd; do
   u=${entry%%:*}; need=${entry#*:}
   if [[ -n $need ]] && ! command -v "$need" >/dev/null 2>&1; then
+    continue
+  fi
+  # Gestures stay off until the input group is active (see 3.6).
+  if [[ $need == lisgd ]] && ! id -nG | tr ' ' '\n' | grep -qx input; then
     continue
   fi
   if systemctl --user is-enabled "$u" >/dev/null 2>&1; then

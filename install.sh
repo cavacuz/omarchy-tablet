@@ -92,7 +92,11 @@ if (( ${#MISSING[@]} > 0 )); then
   fi
 fi
 if command -v lisgd >/dev/null 2>&1; then
-  ok "lisgd present (gestures on)"
+  ok "lisgd present"
+  if ! id -nG | tr ' ' '\n' | grep -qx input; then
+    echo "INFO: gestures also need 'input' group membership (lisgd reads the raw"
+    echo "      touchscreen node): sudo usermod -aG input $(id -un), then log out and back in."
+  fi
 else
   echo "INFO: lisgd not installed — touch gestures stay off (optional)."
   echo "      To enable them, install it yourself (AUR, e.g. 'yay -S lisgd');"

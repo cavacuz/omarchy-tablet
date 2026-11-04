@@ -118,7 +118,7 @@ stays disabled — no restart loops.
 | Feature | Needs | Install (optional) |
 |---|---|---|
 | Auto-rotate | `iio-sensor-proxy` (`monitor-sensor`) | `sudo pacman -S iio-sensor-proxy` (the standalone `install.sh` without `--no-sudo` does this for you) |
-| Touch gestures | `lisgd` | AUR only — never auto-installed (the installer never pulls from the mutable AUR): `yay -S lisgd` or your AUR helper |
+| Touch gestures | `lisgd` + membership in the `input` group (lisgd reads the raw touchscreen device) | AUR only — never auto-installed (the installer never pulls from the mutable AUR): `yay -S lisgd` or your AUR helper, then `sudo usermod -aG input $USER` and log out and back in |
 
 ## Usage
 
