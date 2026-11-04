@@ -63,40 +63,40 @@ sync_file() {
 SYNCED=0
 
 # --- 1. Dependencies ---
-# Official-repo packages are auto-installed below. lisgd (the gesture
-# daemon, AUR-only) is deliberately NOT auto-installed: the marketplace
-# security review rejects pulling a mutable AUR package without a pinned
-# checksum, so lisgd stays an externally managed dependency — we check
-# for it and point the user at a manual install instead.
+# Nothing here blocks deployment. The core (SAM OSK, tablet mode, touch
+# cursor, bar widget) needs only packages a stock Omarchy already ships
+# (wtype, python-gobject, gtk4-layer-shell, jq). Two features are
+# OPTIONAL and switch on by themselves once their package is present
+# (tablet-services.sh, run here and on every shell load):
+#   auto-rotate  <- iio-sensor-proxy (official repo; a Dell Latitude 5290
+#                   2-in-1 shipped without it, 2026-11-03)
+#   gestures     <- lisgd (AUR-only: never auto-installed — the
+#                   marketplace review rejects pulling a mutable AUR
+#                   package, so it stays externally managed)
+# Without --no-sudo (interactive standalone install) missing official
+# packages are installed with pacman; with --no-sudo they are reported.
 say "dependencies"
-# iio-sensor-proxy provides monitor-sensor (auto-rotate's orientation
-# source); jq parses hyprctl output. Neither is guaranteed on a stock
-# install (a Dell Latitude 5290 2-in-1 shipped without iio-sensor-proxy
-# and auto-rotate silently restart-looped, 2026-11-03).
 OFFICIAL=(wtype python-gobject gtk4 gtk4-layer-shell iio-sensor-proxy jq)
 MISSING=()
 for p in "${OFFICIAL[@]}"; do
   pacman -Q "$p" >/dev/null 2>&1 && ok "$p present" || MISSING+=("$p")
 done
-if command -v lisgd >/dev/null 2>&1; then
-  ok "lisgd present"
-else
-  echo "WARN: lisgd (the gesture daemon) is NOT installed."
-  echo "      It is not auto-installed — install it yourself so its source stays"
-  echo "      under your control, then re-run install.sh:"
-  echo "        yay -S lisgd    # or your AUR helper of choice"
-  FAIL=1
-fi
-if (( NO_SUDO )); then
-  if (( ${#MISSING[@]} > 0 )); then
-    echo "WARN: missing official packages (install manually): ${MISSING[*]}"
-    FAIL=1
-  fi
-else
-  if (( ${#MISSING[@]} > 0 )); then
+if (( ${#MISSING[@]} > 0 )); then
+  if (( NO_SUDO )); then
+    echo "INFO: not installed (features using them stay off): ${MISSING[*]}"
+    echo "      optional: sudo pacman -S --needed ${MISSING[*]}"
+  else
     say "installing missing official packages: ${MISSING[*]}"
-    sudo pacman -S --needed "${MISSING[@]}" || { echo "FATAL: pacman install failed"; exit 1; }
+    sudo pacman -S --needed "${MISSING[@]}" \
+      || echo "WARN: pacman install failed — features needing ${MISSING[*]} stay off"
   fi
+fi
+if command -v lisgd >/dev/null 2>&1; then
+  ok "lisgd present (gestures on)"
+else
+  echo "INFO: lisgd not installed — touch gestures stay off (optional)."
+  echo "      To enable them, install it yourself (AUR, e.g. 'yay -S lisgd');"
+  echo "      they switch on at the next shell load (or run tablet-services.sh)."
 fi
 
 # --- 2. Files (ours outright; backup anything in the way) ---
@@ -106,7 +106,8 @@ for s in tablet-mode.sh tablet-modwait.py tablet-auto-exit.py touch-gestures.sh 
          auto-rotate.sh touch-cursor.py touch-toggle.sh osk-toggle.sh \
          custom-kbd.py custom-kbd-toggle.sh squeekboard-toggle.sh wvkbd-toggle.sh \
          tablet-verify.sh tablet-verify-interactive.sh tablet-devices.sh \
-         page-switch.sh tablet-companion-uninstall.sh keybindings-apply.sh keybindings-set.sh; do
+         page-switch.sh tablet-companion-uninstall.sh keybindings-apply.sh keybindings-set.sh \
+         tablet-services.sh; do
   src=""
   [[ -f "$REPO/tablet/$s" ]] && src="$REPO/tablet/$s"
   [[ -f "$REPO/kbd/$s" ]] && src="$REPO/kbd/$s"
@@ -126,16 +127,13 @@ for u in auto-rotate.service lisgd-gestures.service touch-cursor.service; do
   sync_file "$REPO/tablet/units/$u" "$UNITDIR/$u"
 done
 systemctl --user daemon-reload
-for u in auto-rotate.service lisgd-gestures.service touch-cursor.service; do
-  systemctl --user enable --now "$u" && ok "enabled $u" || { echo "FATAL: cannot enable $u"; exit 1; }
-done
-# An update replaced scripts/units under running services: restart the
-# ones already running so they pick up the new code (try-restart leaves
-# stopped units alone).
-if (( SYNCED )); then
-  systemctl --user try-restart auto-rotate.service lisgd-gestures.service touch-cursor.service \
-    && ok "services restarted (updated files)"
-fi
+# Enable the services whose dependency is present (optional ones stay
+# off until it is); after an update, restart the running ones onto the
+# new files (try-restart leaves stopped units alone).
+RESTART_ARG=""
+(( SYNCED )) && RESTART_ARG="--restart"
+"$HYPR/scripts/tablet-services.sh" $RESTART_ARG \
+  || { echo "FATAL: core service touch-cursor.service is not active"; exit 1; }
 cp "$REPO/hooks/tablet-verify.hook" "$HOOKDIR/tablet-verify.hook" \
   && chmod +x "$HOOKDIR/tablet-verify.hook" && ok "post-update hook (report-only)"
 
@@ -280,10 +278,6 @@ fi
 # --- 6. Final gate ---
 say "final verify"
 if [[ "$FAIL" -ne 0 ]]; then
-  if (( NO_SUDO )); then
-    echo "WARN: deployment deferred — resolve the missing deps listed above, then run ./install.sh"
-    exit 1
-  fi
   echo "FATAL: manual fallback steps above are required, then re-run install.sh"
   exit 1
 fi

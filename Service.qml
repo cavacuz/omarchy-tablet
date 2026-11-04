@@ -37,8 +37,11 @@ Item {
       '  /bin/bash ' + JSON.stringify(pluginDir + "/install.sh") + ' --no-sudo --quiet; ' +
       '  mkdir -p "$(dirname "$M")"; printf "%s" "$V" > "$M"; ' +
       'fi; ' +
-      'systemctl --user enable --now auto-rotate.service lisgd-gestures.service touch-cursor.service && ' +
-      'systemctl --user is-active auto-rotate.service'
+      // Enable what can run: auto-rotate / gestures are optional and
+      // switch on here, on the next shell load, once iio-sensor-proxy /
+      // lisgd are installed; until then they stay disabled (no restart
+      // loops). Succeeds when the core touch-cursor service is active.
+      '"$HOME/.config/hypr/scripts/tablet-services.sh"'
   }
 
   Process {
@@ -62,7 +65,7 @@ Item {
     }
 
     function restart(): string {
-      run("systemctl --user restart auto-rotate.service lisgd-gestures.service touch-cursor.service")
+      run('"$HOME/.config/hypr/scripts/tablet-services.sh" --restart')
       return "restarted"
     }
   }

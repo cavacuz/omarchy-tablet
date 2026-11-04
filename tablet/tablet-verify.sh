@@ -100,18 +100,17 @@ else
   fi
 fi
 
-# --- 3.6 Gesture daemon (externally managed — never auto-installed) ---
+# --- 3.6 Optional features (INFO only — never FAIL; they switch on by
+# themselves once the package is present, via tablet-services.sh) ---
 if command -v lisgd >/dev/null 2>&1; then
-  pass "lisgd present (gesture daemon)"
+  pass "lisgd present (gestures on)"
 else
-  fail "lisgd not installed — gestures are disabled; install it via your AUR helper, then re-run install.sh"
+  echo "INFO: lisgd not installed — gestures off (optional; AUR, e.g. 'yay -S lisgd')"
 fi
-
-# --- 3.7 Orientation source for auto-rotate ---
 if command -v monitor-sensor >/dev/null 2>&1; then
-  pass "monitor-sensor present (iio-sensor-proxy, auto-rotate)"
+  pass "monitor-sensor present (iio-sensor-proxy, auto-rotate on)"
 else
-  fail "monitor-sensor missing — auto-rotate cannot work; sudo pacman -S iio-sensor-proxy"
+  echo "INFO: monitor-sensor missing — auto-rotate off (optional; sudo pacman -S iio-sensor-proxy)"
 fi
 
 # --- 3.8 Display-layout managers that undo auto-rotate (warn-only) ---
@@ -125,8 +124,12 @@ if command -v omarchy >/dev/null 2>&1 && \
   echo "      omarchy plugin disable io.github.dragosol.better-displays-pro"
 fi
 
-# --- 4. Systemd units enabled ---
-for u in auto-rotate.service lisgd-gestures.service touch-cursor.service; do
+# --- 4. Systemd units enabled (optional units only when their dep exists) ---
+for entry in touch-cursor.service: auto-rotate.service:monitor-sensor lisgd-gestures.service:lisgd; do
+  u=${entry%%:*}; need=${entry#*:}
+  if [[ -n $need ]] && ! command -v "$need" >/dev/null 2>&1; then
+    continue
+  fi
   if systemctl --user is-enabled "$u" >/dev/null 2>&1; then
     pass "unit enabled $u"
   else

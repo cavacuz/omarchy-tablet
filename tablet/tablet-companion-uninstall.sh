@@ -40,7 +40,8 @@ for f in tablet-mode.sh tablet-modwait.py tablet-auto-exit.py touch-gestures.sh 
          auto-rotate.sh touch-cursor.py touch-toggle.sh osk-toggle.sh \
          custom-kbd.py custom-kbd-toggle.sh squeekboard-toggle.sh wvkbd-toggle.sh \
          tablet-verify.sh tablet-verify-interactive.sh tablet-devices.sh \
-         page-switch.sh tablet-companion-uninstall.sh keybindings-apply.sh keybindings-set.sh; do
+         page-switch.sh tablet-companion-uninstall.sh keybindings-apply.sh keybindings-set.sh \
+         tablet-services.sh; do
   rm -f "$SCRIPTS/$f"
 done
 # Remove ONLY the layout this plugin installs (en.json). rmdir then drops

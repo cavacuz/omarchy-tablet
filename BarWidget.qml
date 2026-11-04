@@ -57,7 +57,7 @@ BarWidget {
     root.bar.run(
       "L=\"$HOME/.local/state/omarchy/toggles/hypr/rotate-lock\"; " +
       "if [[ -f $L ]]; then rm -f \"$L\"; else mkdir -p \"$(dirname \"$L\")\"; : > \"$L\"; fi; " +
-      "systemctl --user restart auto-rotate.service")
+      "systemctl --user try-restart auto-rotate.service")
     refreshTimer.restart()
   }
 

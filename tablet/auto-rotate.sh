@@ -82,7 +82,9 @@ apply() {
   # the single owner of the daemon (a detached spawn here would fight it —
   # seen 2026-09-05: service restarts wiped the mapping twice). Restart it
   # with the orientation in its environment instead.
-  if [[ $m_out == "ok" ]]; then
+  # Gestures are optional: without lisgd the unit is disabled on purpose —
+  # restarting it would only start a no-op restart loop.
+  if [[ $m_out == "ok" ]] && command -v lisgd >/dev/null 2>&1; then
     systemctl --user set-environment ORIENTATION="$t" 2>/dev/null
     systemctl --user restart lisgd-gestures.service 2>/dev/null || \
       ORIENTATION="$t" setsid -f "$HOME/.config/hypr/scripts/touch-gestures.sh" \

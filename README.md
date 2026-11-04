@@ -51,7 +51,11 @@ first shell load (idempotent — runs `install.sh --no-sudo --quiet`,
 which installs files + systemd units and enables the services), and
 again once after `omarchy plugin update` brings a new version (the
 deploy marker records the manifest version; running services are
-restarted onto the new files), then keeps the three unit services
+restarted onto the new files). On every shell load it keeps the
+services whose dependencies are present enabled — the optional ones
+(see *Optional features*) switch on once their package is installed.
+No manual setup is needed on a stock Omarchy. If the plugin was added
+without `--enable`:
 
 ```bash
 omarchy plugin enable cavacuz.tablet
@@ -67,8 +71,9 @@ git clone https://github.com/cavacuz/omarchy-tablet.git && ./omarchy-tablet/inst
 
 The installer is idempotent and backs up anything it replaces. It:
 
-1. Installs missing dependencies from the official repos (checks for
-   `lisgd` and reports it as a manual, externally managed dependency).
+1. Installs missing dependencies from the official repos (with
+   `--no-sudo` it only reports them). Missing packages never block the
+   install — see *Optional features*.
 2. Copies SAM OSK, its layouts, the tablet wiring, systemd units, and the
    report-only post-update hook.
 3. Detects your devices (touch / keyboard / touchpad / internal display)
@@ -91,9 +96,9 @@ Tested hardware and how to add your own: see
 - A **convertible laptop** with a touch digitizer (internal display
   preferred for rotation)
 - Arch-based system (Omarchy recommended)
-- Installer pulls these automatically (official repos): `wtype`,
-  `python-gobject`, `gtk4`, `gtk4-layer-shell`, `iio-sensor-proxy`
-  (accelerometer → `monitor-sensor`, required for auto-rotate), `jq`
+- Core dependencies — all shipped by a stock Omarchy install, so the
+  standard `omarchy plugin add … --enable` path needs no manual setup:
+  `wtype`, `python-gobject`, `gtk4`, `gtk4-layer-shell`, `jq`
 - **Conflicts:** display-layout managers that re-apply a remembered
   layout undo auto-rotation. **Better Displays Pro**
   (`io.github.dragosol.better-displays-pro`) restores transform 0 within
@@ -101,10 +106,19 @@ Tested hardware and how to add your own: see
   screen. Disable it on convertibles:
   `omarchy plugin disable io.github.dragosol.better-displays-pro`
   (`tablet-verify.sh` warns when it is enabled)
-- **`lisgd`** (the gesture daemon) is **not auto-installed** — it is an
-  externally managed dependency, so install it yourself (the installer
-  never pulls from the mutating AUR): `yay -S lisgd` (or your AUR
-  helper), then run `install.sh`
+
+### Optional features
+
+Two features need a package that stock Omarchy does not ship. The plugin
+installs and works without them; each switches on by itself at the next
+shell load once its package is present (or run
+`~/.config/hypr/scripts/tablet-services.sh`). Until then its service
+stays disabled — no restart loops.
+
+| Feature | Needs | Install (optional) |
+|---|---|---|
+| Auto-rotate | `iio-sensor-proxy` (`monitor-sensor`) | `sudo pacman -S iio-sensor-proxy` (the standalone `install.sh` without `--no-sudo` does this for you) |
+| Touch gestures | `lisgd` | AUR only — never auto-installed (the installer never pulls from the mutable AUR): `yay -S lisgd` or your AUR helper |
 
 ## Usage
 
